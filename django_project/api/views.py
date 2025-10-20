@@ -49,7 +49,7 @@ def house_form(request):
     if request.method == "POST":
         address = request.POST.get("address")
         area = float(request.POST.get("area"))
-        bedrooms = int(request.POST.get("bedrooms"))
+        bedrooms = int(request.POST.get("rooms"))
         parking = int(request.POST.get("parking"))
         warehouse = int(request.POST.get("warehouse"))
         elevator = int(request.POST.get("elevator"))
