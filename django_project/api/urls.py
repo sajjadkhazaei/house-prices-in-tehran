@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import PredictPrice
+from .views import PredictPriceAPIView, house_form
 
 urlpatterns = [
-    path('predict/', PredictPrice.as_view(), name='predict_price'),
+    path('predict/', PredictPriceAPIView.as_view(), name='predict-price'),
+    path('form/', house_form, name='house-form'),
 ]

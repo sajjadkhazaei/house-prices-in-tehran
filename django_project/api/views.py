@@ -2,68 +2,67 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import HouseDataSerializer
 import joblib
 import numpy as np
-import os
-from django.conf import settings
+from .serializers import PredictPriceSerializer
 
+# بارگذاری مدل‌ها و LabelEncoder
+xgb_model = joblib.load("house_price_xgb_final.joblib")
+scaler = joblib.load("scaler.joblib")
+address_encoder = joblib.load("address_encoder.joblib")
 
-
-# یکبار مدل و اسکِیلر را لود کن (با مسیر نسبی به BASE_DIR)
-BASE_DIR = settings.BASE_DIR  # از تنظیمات Django
-MODEL_PATH = os.path.join(BASE_DIR, "house_price_xgb_final.joblib")
-SCALER_PATH = os.path.join(BASE_DIR, "scaler.joblib")
-
-# اگر فایل‌ها در مسیر دیگری قرار دادی، مسیر بالا را ویرایش کن.
-
-try:
-    model = joblib.load(MODEL_PATH)
-except Exception as e:
-    model = None
-    _model_load_error = str(e)
-
-try:
-    scaler = joblib.load(SCALER_PATH)
-except Exception as e:
-    scaler = None
-    _scaler_load_error = str(e)
-
-class PredictPrice(APIView):
+# ----------- API برای POST JSON -----------
+class PredictPriceAPIView(APIView):
     def post(self, request):
-        serializer = HouseDataSerializer(data=request.data)
-        if not serializer.is_valid():
+        serializer = PredictPriceSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            address_num = address_encoder.transform([data['Address']])[0]
+
+            X = np.array([[
+                data['Area'],
+                data['Room'],
+                int(data['Parking']),
+                int(data['Warehouse']),
+                int(data['Elevator']),
+                address_num
+            ]])
+            X_scaled = scaler.transform(X)
+            prediction = xgb_model.predict(X_scaled)[0]
+
+            # تبدیل به عدد با جداکننده هزارگان
+            formatted_prediction = f"{int(prediction):,}"
+
+            return Response({"predicted_price": formatted_prediction}, status=status.HTTP_200_OK)
+        else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if model is None or scaler is None:
-            err = {}
-            if model is None:
-                err['model'] = f"Model not loaded: {_model_load_error}"
-            if scaler is None:
-                err['scaler'] = f"Scaler not loaded: {_scaler_load_error}"
-            return Response({"error": "Model/scaler missing", "details": err}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        data = serializer.validated_data
-        
-        features = np.array([[
-            data["Area"],
-            data["Room"],
-            data["Parking"],
-            data["Warehouse"],
-            data["Elevator"],
-            
-            data["Address_by_number"],
+# ----------- HTML Form -----------
+import pandas as pd
 
-        ]], dtype=float)
+model = xgb_model  # مدل پیش‌بینی برای فرم
+le_address = address_encoder  # LabelEncoder برای فرم
 
-        # scale و predict
-        scaled = scaler.transform(features)
-        pred = model.predict(scaled)[0]
-        # معمولاً Price بر حسب تومان است؛ در صورت نیاز رُند کن
-        '''return Response({"predicted_price": float(round(pred, 2))})'''
-        formatted_price = f"{int(pred):,} تومان"
-        return Response({"predicted_price": formatted_price})
+def house_form(request):
+    prediction = None
+    if request.method == "POST":
+        address = request.POST.get("address")
+        area = float(request.POST.get("area"))
+        bedrooms = int(request.POST.get("bedrooms"))
+        parking = int(request.POST.get("parking"))
+        warehouse = int(request.POST.get("warehouse"))
+        elevator = int(request.POST.get("elevator"))
 
+        # تبدیل آدرس به عدد
+        address_encoded = le_address.transform([address])[0]
 
+        # آماده‌سازی دیتا برای پیش‌بینی
+        X = np.array([[area, bedrooms, parking, warehouse, elevator, address_encoded]])
+        X_scaled = scaler.transform(X)
+        pred = model.predict(X_scaled)[0]
 
-# Create your views here.
+        # فرمت عدد برای نمایش خوانا
+        prediction = f"{int(pred):,}"
+
+    return render(request, "house_form.html", {"prediction": prediction})
