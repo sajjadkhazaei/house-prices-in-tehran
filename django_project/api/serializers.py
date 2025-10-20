@@ -7,3 +7,4 @@ class PredictPriceSerializer(serializers.Serializer):
     Warehouse = serializers.IntegerField()
     Elevator = serializers.IntegerField()
     Address = serializers.CharField()
+    price_per_meter = serializers.FloatField()

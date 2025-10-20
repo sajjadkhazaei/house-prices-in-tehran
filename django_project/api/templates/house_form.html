@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>House Price in Tehran</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
@@ -12,33 +12,43 @@
         <h1>House Price in Tehran</h1>
         <form method="POST">
             {% csrf_token %}
-            <label>Address:</label>
-            <input type="text" name="address" placeholder="e.g. Zaferaniyeh" required>
 
-            <label>Area (m²):</label>
+            <label> Addresses :</label>
+            <input list="addresses" name="address" placeholder="e.g. Zaferaniyeh" required>
+            <datalist id="addresses">
+                {% for a in address_choices %}
+                    <option value="{{ a }}"></option>
+                {% endfor %}
+            </datalist>
+
+            <label>Area (m²) :</label>
             <input type="number" name="area" step="0.01" placeholder="e.g. 120" required>
 
-            <label>Room:</label>
+            <label>Room : </label>
             <input type="number" name="rooms" placeholder="e.g. 3" required>
 
-            <label>Parking:</label>
-            <input type="number" name="parking" placeholder="1 means True or 0 means False" required>
+            <label>Parking (0/1):</label>
+            <input type="number" name="parking" min="0" max="1" placeholder="means True or 0 means False" required>
 
-            <label>Warehouse:</label>
-            <input type="number" name="warehouse" placeholder="1 means True or 0 means False" required>
+            <label>Warehouse (0/1):</label>
+            <input type="number" name="warehouse" min="0" max="1" placeholder="means True or 0 means False" required>
 
-            <label>Elevator:</label>
-            <input type="number" name="elevator" placeholder="1 means True or 0 means False " required>
+            <label>Elevator (0/1):</label>
+            <input type="number" name="elevator" min="0" max="1" placeholder="means True or 0 means False" required>
+
+            <label>price_per_meter(Toman)</label>
+            <input type="number" name="price_per_meter" step="1000" placeholder="e.g. 2,000,000" required>
 
             <button type="submit">Predict Price</button>
         </form>
 
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
         {% if prediction %}
-            <div class="result">
-                Predicted Price: {{ prediction }} Toman
-            </div>
+            <div class="result">Predict Price : {{ prediction }} Toman </div>
         {% endif %}
     </div>
 </body>
 </html>
-

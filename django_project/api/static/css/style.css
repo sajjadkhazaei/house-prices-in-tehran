@@ -8,6 +8,16 @@ body {
     height: 100vh;
     margin: 0;
 }
+input[list="addresses"] {
+    width: 105%;            
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
 .container {
     background: #fff;
     padding: 30px 40px;
