@@ -49,6 +49,11 @@
         {% if prediction %}
             <div class="result">Predict Price : {{ prediction }} Toman </div>
         {% endif %}
+        {% if negative_input_warning %}
+        <div class="error">{{ negative_input_warning }}</div>
+        {% endif %}
     </div>
+    
+
 </body>
 </html>

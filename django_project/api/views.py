@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 import joblib
 import numpy as np
-from .serializers import PredictPriceSerializer
 import pandas as pd
+from .serializers import PredictPriceSerializer
 import os
 from django.conf import settings
 
@@ -19,13 +19,12 @@ xgb_model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 address_encoder = joblib.load(ENCODER_PATH)
 
-most_common_address_encoded = None
+most_common_address_encoded = 0  # default
 try:
+    # اگر بخوای می‌تونی اینجا بیشترین تکرار رو هم پیدا کنی
     classes = list(address_encoder.classes_)
-
-    most_common_address_encoded = 0
 except Exception:
-    most_common_address_encoded = 0
+    pass
 
 class PredictPriceAPIView(APIView):
     def post(self, request):
@@ -33,16 +32,15 @@ class PredictPriceAPIView(APIView):
         if serializer.is_valid():
             data = serializer.validated_data
 
-            # convert address to encoded number
+            # encode address
             address_text = str(data['Address'])
             if address_text in list(address_encoder.classes_):
                 address_num = int(address_encoder.transform([address_text])[0])
             else:
-                # if address not found in encoder, use most common
                 address_num = int(most_common_address_encoded)
 
-            # prepare input array for model
-            X = np.array([[
+            # prepare input as DataFrame with column names
+            X = pd.DataFrame([[
                 data['Area'],
                 data['Room'],
                 int(data['Parking']),
@@ -50,13 +48,15 @@ class PredictPriceAPIView(APIView):
                 int(data['Elevator']),
                 address_num,
                 data['price_per_meter']
-            ]], dtype=float)
+            ]], columns=['Area','Room','Parking','Warehouse','Elevator','Address','price_per_meter'])
 
-            # predict & scale
-            X_scaled = scaler.transform(X)  
+            # scale & predict
+            X_scaled = scaler.transform(X)
             pred = xgb_model.predict(X_scaled)[0]
 
-            #format output with commas
+            # جلوگیری از منفی شدن
+            pred = max(pred, 0)
+
             formatted = f"{int(round(pred)):,}"
             return Response({"predicted_price": formatted}, status=status.HTTP_200_OK)
         else:
@@ -67,6 +67,7 @@ class PredictPriceAPIView(APIView):
 def house_form(request):
     prediction = None
     error = None
+    negative_input_warning = None  
 
     if request.method == "POST":
         try:
@@ -78,16 +79,21 @@ def house_form(request):
             elevator = int(request.POST.get('elevator', 0))
             price_per_meter = float(request.POST.get('price_per_meter', 0))
 
-            # convert address -> encoded
             if address in list(address_encoder.classes_):
                 address_num = int(address_encoder.transform([address])[0])
             else:
                 address_num = int(most_common_address_encoded)
 
-            X = np.array([[area, rooms, parking, warehouse, elevator, address_num, price_per_meter]], dtype=float)
+            X = pd.DataFrame([[area, rooms, parking, warehouse, elevator, address_num, price_per_meter]],
+                             columns=['Area','Room','Parking','Warehouse','Elevator','Address','price_per_meter'])
             X_scaled = scaler.transform(X)
             pred = xgb_model.predict(X_scaled)[0]
-            prediction = f"{int(round(pred)):,}"
+
+            if pred < 0:
+                prediction = None
+                negative_input_warning = "The inputs are unrealistic, the prediction was negative. Please adjust the inputs."
+            else:
+                prediction = f"{int(round(pred)):,}"
         except Exception as e:
             error = str(e)
 
@@ -96,5 +102,6 @@ def house_form(request):
     return render(request, "house_form.html", {
         "prediction": prediction,
         "error": error,
+        "negative_input_warning": negative_input_warning,
         "address_choices": address_choices
     })
