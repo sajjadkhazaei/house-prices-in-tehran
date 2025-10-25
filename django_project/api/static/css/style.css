@@ -56,7 +56,9 @@ button {
     transition: background 0.3s ease;
 }
 button:hover {
-    background: #45a049;
+    background-color: #0056b3;
+    color: white;
+    transition: 0.3s;
 }
 .result {
     margin-top: 20px;

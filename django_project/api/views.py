@@ -105,3 +105,7 @@ def house_form(request):
         "negative_input_warning": negative_input_warning,
         "address_choices": address_choices
     })
+    
+    
+def home(request):
+    return render(request, 'home.html')
