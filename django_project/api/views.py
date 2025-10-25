@@ -21,7 +21,6 @@ address_encoder = joblib.load(ENCODER_PATH)
 
 most_common_address_encoded = 0  # default
 try:
-    # اگر بخوای می‌تونی اینجا بیشترین تکرار رو هم پیدا کنی
     classes = list(address_encoder.classes_)
 except Exception:
     pass
@@ -54,7 +53,6 @@ class PredictPriceAPIView(APIView):
             X_scaled = scaler.transform(X)
             pred = xgb_model.predict(X_scaled)[0]
 
-            # جلوگیری از منفی شدن
             pred = max(pred, 0)
 
             formatted = f"{int(round(pred)):,}"
