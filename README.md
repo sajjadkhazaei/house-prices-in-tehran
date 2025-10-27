@@ -19,7 +19,7 @@ This data is used to train a **machine learning model** for price prediction.
 
 ## ⚙️ Features
 
-- House price prediction using a **Random Forest model**  
+- House price prediction using a *XGBoost model**  
 - API endpoint for submitting property data and receiving predictions  
 - Simple web interface to input property data and view predictions  
 - Handling unrealistic outputs (e.g., negative predicted prices)  
